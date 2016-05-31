@@ -1,7 +1,9 @@
 hetero-array: fast read-only heterogeneous data structures
 ==========================================================
 
-This module is extracted from <http://hackage.haskell.org/package/web-routing web-routing>, orginally desgined for high performance type safe routing.
+[![Travis-CI](https://travis-ci.org/winterland1989/hetero-array.svg)](https://travis-ci.org/winterland1989/hetero-array)
+
+This module is extracted from [web-routing](http://hackage.haskell.org/package/web-routing), orginally desgined for high performance type safe routing.
 
 The basic idea is:
 
