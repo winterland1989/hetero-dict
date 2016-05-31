@@ -41,7 +41,7 @@
 -- "baz"
 -- @
 --
-module Data.Hetero.Store
+module Data.Hetero.Dict
     (
     -- ** KV, KVList
       KV(..)

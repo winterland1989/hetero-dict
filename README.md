@@ -1,7 +1,7 @@
-hetero-array: fast read-only heterogeneous data structures
+hetero-dict: fast read-only heterogeneous data structures
 ==========================================================
 
-[![Travis-CI](https://travis-ci.org/winterland1989/hetero-store.svg)](https://travis-ci.org/winterland1989/hetero-store)
+[![Travis-CI](https://travis-ci.org/winterland1989/hetero-dict.svg)](https://travis-ci.org/winterland1989/hetero-dict)
 
 This module is extracted from [web-routing](http://hackage.haskell.org/package/web-routing), orginally desgined for high performance type safe routing.
 
