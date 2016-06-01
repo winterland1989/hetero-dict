@@ -1,9 +1,10 @@
 hetero-dict: fast heterogeneous data structures
 ===============================================
 
+[![Hackage](https://img.shields.io/hackage/v/hetero-dict.svg?style=flat)](http://hackage.haskell.org/package/hetero-dict)
 [![Travis-CI](https://travis-ci.org/winterland1989/hetero-dict.svg)](https://travis-ci.org/winterland1989/hetero-dict)
 
-This package provide two flavor fast heterogeneous data structures:
+This package provide two flavor fast and easy to use heterogeneous data structures:
 
 1. `Dict` which use boxed array, it's read-only with O(1) get.
 
