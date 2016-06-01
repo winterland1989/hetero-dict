@@ -1,5 +1,5 @@
 name:                hetero-dict
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:            Fast heterogeneous data structures
 description:         Fast heterogeneous data structures
 license:             MIT

@@ -145,6 +145,6 @@ instance (KnownSymbol k, Typeable v, Show v, ShowDynDict kvs) => ShowDynDict (k 
         showDict (i + 1) (unsafeCoerce $ DynDict t :: DynDict kvs)
 
 instance ShowDynDict kvs => Show (DynDict kvs) where
-    show d = "Dict {" ++
+    show d = "DynDict {" ++
         (intercalate ", " . map (\(k, v, t) -> k ++ " = " ++ v ++ " :: " ++ show t) $ showDict 0 d)
         ++ "}"
