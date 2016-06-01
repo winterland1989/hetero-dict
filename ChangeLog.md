@@ -1,4 +1,4 @@
-# Revision history for hetero-array
+# Revision history for hetero-dict
 
 ## 0.1.0.0  -- 2016-05-31
 
