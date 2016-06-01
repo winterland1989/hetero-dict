@@ -9,15 +9,13 @@
 {-# LANGUAGE KindSignatures         #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
 #if __GLASGOW_HASKELL__ < 710
 {-# LANGUAGE OverlappingInstances   #-}
 #endif
 
--- | Fast read-only heterogeneous data structures.
+-- | Fast read-only heterogeneous array.
 --
 --  This module is extracted from <http://hackage.haskell.org/package/web-routing web-routing>,
 --  orginally desgined for high performance type safe routing.
@@ -43,66 +41,37 @@
 --
 module Data.Hetero.Dict
     (
-    -- ** KV, KVList
-      KV(..)
+    -- ** export from KVList
+      key
+    , KV(..)
     , KVList(..)
-    , key
+    , NotHasKey
+    , Ix
     -- ** Store
     , Store
     , emptyStore
-    , NotInStore
     , add
     -- ** Dict
     , Dict
-    , emptyDict
     , mkDict'
     , mkDict
     , InDict
     , get
     , (!)
-    -- ** Internal helpers
-    , AddKey
-    , AddResult(..)
-    , GetResult(..)
+    -- ** helpers
     , ShowDict(..)
     ) where
 
-import           GHC.Exts                  (Any)
-import qualified Control.Monad.Primitive   as P
-import           Control.Monad.ST          (ST, runST)
-import           Data.List                 (intercalate)
-import qualified Data.Primitive.Array      as P
+import qualified Control.Monad.Primitive as P
+import           Control.Monad.ST        (ST, runST)
+import           Data.Hetero.KVList
+import           Data.List               (intercalate)
+import qualified Data.Primitive.Array    as P
 import           Data.Proxy
-import           Data.Typeable             (TypeRep, Typeable, typeOf)
+import           Data.Typeable           (TypeRep, Typeable, typeOf)
+import           GHC.Exts                (Any)
 import           GHC.TypeLits
-import qualified Language.Haskell.TH       as TH
-import           Language.Haskell.TH.Quote (QuasiQuoter (..))
 import           Unsafe.Coerce
-
---------------------------------------------------------------------------------
-
--- | (kind) key-value pair
---
-data KV v = Symbol := v
-
--- | A simple heterogeneous kv linked-list.
---
-data KVList (kvs :: [KV *]) where
-    Cons  :: v -> KVList kvs -> KVList (k ':= v ': kvs)
-    Empty :: KVList '[]
-
-
--- | Quoter for constructing string literal proxy.
---
--- @[key|foo|] == (Proxy :: Proxy "foo")@
---
-key :: QuasiQuoter
-key = QuasiQuoter
-    { quoteExp  = \s -> [| Proxy :: Proxy $(TH.litT $ TH.strTyLit s) |]
-    , quotePat  = error "key qq only exp or type."
-    , quoteType = \s -> [t| Proxy $(TH.litT $ TH.strTyLit s) |]
-    , quoteDec  = error "key qq only exp or type."
-    }
 
 --------------------------------------------------------------------------------
 
@@ -121,27 +90,8 @@ emptyStore :: Store '[]
 emptyStore = Store 0 Empty
 {-# INLINABLE emptyStore #-}
 
--- | (kind) pretty print type error of 'add'.
---
--- @
--- > add [key|foo|] 12 $ add [key|foo|] "a" emptyStore
--- Couldn't match type ‘'DuplicatedKey "foo"’ with ‘'HasKey "foo"’
--- @
---
-data AddResult = HasKey Symbol | DuplicatedKey Symbol
 
--- | Add a key's type to 'KVList' if not existed.
---
-type family AddKey (k :: Symbol) (kvs :: [KV *]) :: AddResult where
-    AddKey k '[] = 'HasKey k
-    AddKey k (k  ':= v ': kvs) = 'DuplicatedKey k
-    AddKey k (k' ':= v ': kvs) = AddKey k kvs
-
--- | Constraint ensure a key will be inserted into 'Store'.
---
-type NotInStore k v = AddKey k v ~ 'HasKey k
-
--- | O(1) add key value pair to dictionary.
+-- | O(1) add key value pair to 'Store'.
 --
 -- @
 -- > let a = add [key|foo|] (12 :: Int) emptyStore
@@ -151,21 +101,17 @@ type NotInStore k v = AddKey k v ~ 'HasKey k
 -- Store {bar = "baz" :: [Char], foo = 12 :: Int}
 -- @
 --
-add :: (NotInStore k kvs) => proxy k -> v -> Store kvs -> Store (k ':= v ': kvs)
+add :: (NotHasKey k kvs) => proxy k -> v -> Store kvs -> Store (k ':= v ': kvs)
 add _ v (Store l c) = Store (l + 1) (Cons v c)
 {-# INLINABLE add #-}
 
 --------------------------------------------------------------------------------
 
--- | heterogeneous dictionary
+-- | Read-Only heterogeneous array
 --
 -- The underline data structure is a boxed array,
 -- support 'get' operation only.
 newtype Dict (kvs :: [KV *]) = Dict (P.Array Any)
-
-emptyDict :: Dict '[]
-emptyDict = mkDict emptyStore
-{-# INLINABLE emptyDict #-}
 
 -- | O(n) convert a 'Store' into a 'Dict' inside 'ST' monad.
 --
@@ -190,22 +136,7 @@ mkDict :: Store kvs -> Dict kvs
 mkDict store = runST $ mkDict' store
 {-# INLINABLE mkDict #-}
 
--- | (kind) pretty print type error of 'get'
---
--- @
--- > get [key|b|] (mkDict $ add [key|a|] 123 emptyStore)
--- Couldn't match type ‘'Index i0’ with ‘'NotFoundKey "b"’
--- @
---
-data GetResult = Index Nat | NotFoundKey Symbol
-
-type family Ix' (i :: Nat) (k :: Symbol) (kvs :: [KV *]) :: GetResult where
-  Ix' i k '[] = 'NotFoundKey k
-  Ix' i k (k  ':= v ': kvs) = 'Index i
-  Ix' i k (k' ':= v ': kvs) = Ix' (i + 1) k kvs
-type Ix k kvs = Ix' 0 k kvs
-
-getImpl :: forall i proxy k kvs v. (Index i ~ Ix k kvs, KnownNat i) => proxy (k :: Symbol) -> Dict kvs -> v
+getImpl :: forall i proxy k kvs v. ('Index i ~ Ix k kvs, KnownNat i) => proxy (k :: Symbol) -> Dict kvs -> v
 getImpl _ (Dict d) = unsafeCoerce $ d `P.indexArray` fromIntegral (natVal (Proxy :: Proxy i))
 {-# INLINABLE getImpl #-}
 
@@ -222,7 +153,7 @@ instance InDict k v (k ':= v ': kvs) where
     get' = getImpl
     {-# INLINE get' #-}
 
-instance (InDict k v kvs, Index i ~ Ix k (k' ':= v' ': kvs), KnownNat i) => InDict k v (k' ':= v' ': kvs) where
+instance (InDict k v kvs, 'Index i ~ Ix k (k' ':= v' ': kvs), KnownNat i) => InDict k v (k' ':= v' ': kvs) where
     get' = getImpl
     {-# INLINE get' #-}
 
