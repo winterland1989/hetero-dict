@@ -18,7 +18,7 @@
 -- | Fast persistent heterogeneous sequence.
 --
 -- This module define 'DynDict', which use 'S.Seq' as underline data structure,
--- so all operations(add, get, modify)'s time complexity are similar.
+-- so all operations(add, get, modify, set)'s time complexity are similar.
 --
 -- Typical usage: a heterogeneous state store, indexed by type level string.
 --
@@ -43,7 +43,7 @@ module Data.Hetero.DynDict
     , InDict
     , get
     , modify
-    , (!)
+    , set
     -- ** re-export from KVList
     , key
     , KV(..)
@@ -70,6 +70,7 @@ import           Unsafe.Coerce
 -- The underline data structure is 'S.Seq'.
 -- support efficient 'add', 'get' and 'modify' operations.
 newtype DynDict (kvs :: [KV *]) = DynDict (S.Seq Any)
+
 
 -- | A empty 'DynDict'.
 --
@@ -124,13 +125,10 @@ modify :: (InDict k v kvs) => proxy k -> (v -> v) -> DynDict kvs -> DynDict kvs
 modify = modify'
 {-# INLINE modify #-}
 
--- | infix version of 'get'
---
-(!) :: InDict k v kvs => DynDict kvs -> proxy k -> v
-(!) = flip get
-{-# INLINE (!) #-}
-
-infixl 9 !
+-- | O(log(min(i,n-i))) modify value by associated key.
+set :: (InDict k v kvs) => proxy k -> v -> DynDict kvs -> DynDict kvs
+set p v = modify' p (const v)
+{-# INLINE set #-}
 
 --------------------------------------------------------------------------------
 

@@ -57,7 +57,7 @@ key = QuasiQuoter
     , quoteDec  = error "key qq only exp or type."
     }
 
--- | (kind) pretty print type error of 'add'.
+-- | (kind) pretty print type error for 'NotHasKey'.
 --
 -- @
 -- > add [key|foo|] 12 $ add [key|foo|] "a" emptyStore
@@ -77,7 +77,7 @@ type family AddKey (k :: Symbol) (kvs :: [KV *]) :: AddResult where
 --
 type NotHasKey k kvs = AddKey k kvs ~ 'HasKey k
 
--- | (kind) pretty print type error of 'get'
+-- | (kind) pretty print type error for 'Ix'
 --
 -- @
 -- > get [key|b|] (mkDict $ add [key|a|] 123 emptyStore)

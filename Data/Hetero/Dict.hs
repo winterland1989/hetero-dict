@@ -51,7 +51,6 @@ module Data.Hetero.Dict
     , mkDict
     , InDict
     , get
-    , (!)
     -- ** re-export from KVList
     , key
     , KV(..)
@@ -75,7 +74,7 @@ import           Unsafe.Coerce
 
 --------------------------------------------------------------------------------
 
--- | Heterogeneous linked-list with a size field
+-- | Heterogeneous linked-list with a size field.
 --
 -- use 'mkDict' to convert it into a 'Dict'.
 --
@@ -107,7 +106,7 @@ add _ v (Store l c) = Store (l + 1) (Cons v c)
 
 --------------------------------------------------------------------------------
 
--- | Read-Only heterogeneous array
+-- | Read-Only heterogeneous array.
 --
 -- The underline data structure is a boxed array,
 -- support 'get' operation only.
@@ -157,19 +156,11 @@ instance (InDict k v kvs, 'Index i ~ Ix k (k' ':= v' ': kvs), KnownNat i) => InD
     get' = getImpl
     {-# INLINE get' #-}
 
--- | O(1) get value using associated key from 'Dict'
+-- | O(1) get value using associated key from 'Dict'.
 --
 get :: InDict k v kvs => proxy k -> Dict kvs -> v
 get = get'
 {-# INLINE get #-}
-
--- | infix version of 'get'
---
-(!) :: InDict k v kvs => Dict kvs -> proxy k -> v
-(!) = flip get
-{-# INLINE (!) #-}
-
-infixl 9 !
 
 --------------------------------------------------------------------------------
 
