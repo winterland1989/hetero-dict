@@ -2,7 +2,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DataKinds #-}
 
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# OPTIONS_GHC -fno-warn-typed-holes #-}
+
 module Main (main) where
+
+import Data.Vinyl (Rec(..))
+import ProxySymbolTH -- stage restriction
 
 import Criterion.Main
 import qualified Data.Hetero.Dict as D
@@ -22,11 +28,30 @@ small =
     [ bench "Build Dict"    $ nf (D.get [key|qux0|]) dict
     , bench "Build DynDict" $ nf (DD.get [key|qux0|]) dynDict
     , bench "Build HVect"   $ nf ((SSucc SZero)!!) hvect
+    , bench "Build Vinyl"   $ nf (fget [ps|qux0|] :: _ -> Bool) vinyl
+
     , bench "Index Dict"    $ nf getAllDict dict
     , bench "Index DynDict" $ nf getAllDynDict dynDict
     , bench "Index HVect"   $ nf getAllHVect hvect
+    , bench "Index Vinyl"   $ nf getAllVinyl vinyl
     ]
   where
+
+    vinyl
+        = field [ps|foo0|] (1 :: Int)
+       :& field [ps|bar0|] "bar"
+       :& field [ps|qux0|] True
+       :& RNil
+
+    getAllVinyl d =
+      ( fget [ps|foo0|] d :: Int
+       --NOTE the annotations are unnecessary with:
+       -- type Bar0 = '("bar0",String)
+       -- fget [pr|Bar0|] -- pr from Data.Tagged.TH
+      , fget [ps|bar0|] d :: String
+      , fget [ps|qux0|] d :: Bool
+      )
+
     hvect = (1 :: Int)  :&: (1 :: Int)
                         :&: "bar"
                         :&: True
@@ -65,12 +90,56 @@ large =
     [ bench "Build Dict"    $ nf (D.get [key|qux0|]) dict
     , bench "Build DynDict" $ nf (DD.get [key|qux0|]) dynDict
     , bench "Build HVect"   $ nf ((SSucc SZero)!!) hvect
-    , bench "Index Dict"    $ nf getAllDict dict
-    , bench "Index DynDict" $ nf getAllDynDict dynDict
-    , bench "Index HVect"   $ nf getAllHVect hvect
+    , bench "Build Vinyl"   $ nf (fget [ps|qux0|] :: _ -> Bool) vinyl
+
+    , bench "Index Dict"     $ nf getAllDict dict
+    , bench "Index DynDict"  $ nf getAllDynDict dynDict
+    , bench "Index HVect"    $ nf getAllHVect hvect
     , bench "Modify DynDict" $ nf (DD.get [key|qux0|] . DD.modify [key|qux0|] not) dynDict
+    , bench "Index Vinyl"    $ nf getAllVinyl vinyl
+    , bench "Modify Vinyl"   $ nf ((fget [ps|qux0|] :: _ -> Bool) . fmodify [ps|qux0|] not) vinyl
     ]
   where
+
+    getAllVinyl d = (
+        ( fget [ps|foo0|] d :: Int
+        , fget [ps|foo1|] d :: Int
+        , fget [ps|foo2|] d :: Int
+        , fget [ps|foo3|] d :: Int
+        , fget [ps|foo4|] d :: Int
+        ),
+        ( fget [ps|bar0|] d :: String
+        , fget [ps|bar1|] d :: String
+        , fget [ps|bar2|] d :: String
+        , fget [ps|bar3|] d :: String
+        , fget [ps|bar4|] d :: String
+        ),
+        ( fget [ps|qux0|] d :: Bool
+        , fget [ps|qux1|] d :: Bool
+        , fget [ps|qux2|] d :: Bool
+        , fget [ps|qux3|] d :: Bool
+        , fget [ps|qux4|] d :: Bool
+        ))
+
+    vinyl
+        = field [ps|foo0|] (1 :: Int)
+       :& field [ps|foo1|] (1 :: Int)
+       :& field [ps|foo2|] (1 :: Int)
+       :& field [ps|foo3|] (1 :: Int)
+       :& field [ps|foo4|] (1 :: Int)
+       :& field [ps|bar0|] "bar"
+       :& field [ps|bar1|] "bar"
+       :& field [ps|bar2|] "bar"
+       :& field [ps|bar3|] "bar"
+       :& field [ps|bar4|] "bar"
+       :& field [ps|qux0|] True
+       :& field [ps|qux1|] True
+       :& field [ps|qux2|] True
+       :& field [ps|qux3|] True
+       :& field [ps|qux4|] True
+       :& RNil
+
+
     getAllDict d = (
         ( D.get [key|foo0|] d
         , D.get [key|foo1|] d
