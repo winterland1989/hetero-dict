@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards, NamedFieldPuns #-}
 
 {-# LANGUAGE DataKinds, ScopedTypeVariables, ExplicitNamespaces, TypeOperators, FlexibleContexts, PolyKinds #-}

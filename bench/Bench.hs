@@ -2,12 +2,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DataKinds #-}
 
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# OPTIONS_GHC -fno-warn-typed-holes #-}
+-- mostly for fget_qux0
+{-# LANGUAGE TypeOperators, ExplicitNamespaces #-}
 
 module Main (main) where
 
-import Data.Vinyl (Rec(..))
+import Data.Vinyl (Rec(..), FieldRec, type (∈))
+
 import ProxySymbolTH -- stage restriction
 
 import Criterion.Main
@@ -28,7 +29,7 @@ small =
     [ bench "Build Dict"    $ nf (D.get [key|qux0|]) dict
     , bench "Build DynDict" $ nf (DD.get [key|qux0|]) dynDict
     , bench "Build HVect"   $ nf ((SSucc SZero)!!) hvect
-    , bench "Build Vinyl"   $ nf (fget [ps|qux0|] :: _ -> Bool) vinyl
+    , bench "Build Vinyl"   $ nf (fget_qux0) vinyl
 
     , bench "Index Dict"    $ nf getAllDict dict
     , bench "Index DynDict" $ nf getAllDynDict dynDict
@@ -90,15 +91,16 @@ large =
     [ bench "Build Dict"    $ nf (D.get [key|qux0|]) dict
     , bench "Build DynDict" $ nf (DD.get [key|qux0|]) dynDict
     , bench "Build HVect"   $ nf ((SSucc SZero)!!) hvect
-    , bench "Build Vinyl"   $ nf (fget [ps|qux0|] :: _ -> Bool) vinyl
+    , bench "Build Vinyl"   $ nf (fget_qux0) vinyl
 
     , bench "Index Dict"     $ nf getAllDict dict
     , bench "Index DynDict"  $ nf getAllDynDict dynDict
     , bench "Index HVect"    $ nf getAllHVect hvect
     , bench "Modify DynDict" $ nf (DD.get [key|qux0|] . DD.modify [key|qux0|] not) dynDict
     , bench "Index Vinyl"    $ nf getAllVinyl vinyl
-    , bench "Modify Vinyl"   $ nf ((fget [ps|qux0|] :: _ -> Bool) . fmodify [ps|qux0|] not) vinyl
+    , bench "Modify Vinyl"   $ nf (fget_qux0 . fmodify [ps|qux0|] not) vinyl
     ]
+
   where
 
     getAllVinyl d = (
@@ -251,3 +253,6 @@ large =
             . DD.add [key|qux3|] True
             . DD.add [key|qux4|] True
             $ DD.empty
+
+fget_qux0 :: ('("qux0",Bool) ∈ fields) => FieldRec fields -> Bool
+fget_qux0 = fget [ps|qux0|]
