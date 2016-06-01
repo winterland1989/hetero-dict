@@ -36,7 +36,7 @@ d :: Num v => Dict '["foo" ':= v, "bar" ':= [Char]]
 12
 > get [key|bar|] d
 "baz"
-> let d' = set [key|foo] 13 d
+> let d' = set [key|foo|] 13 d
 > get [key|foo|] d'
 13
 ```
