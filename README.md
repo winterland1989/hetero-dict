@@ -1,25 +1,20 @@
-hetero-dict: fast read-only heterogeneous data structures
-==========================================================
+hetero-dict: fast heterogeneous data structures
+===============================================
 
 [![Travis-CI](https://travis-ci.org/winterland1989/hetero-dict.svg)](https://travis-ci.org/winterland1989/hetero-dict)
 
-This module is extracted from [web-routing](http://hackage.haskell.org/package/web-routing), orginally desgined for high performance type safe routing.
+This package provide two flavor fast heterogeneous data structures:
 
-The basic idea is:
+1. `Dict` which use boxed array, it's read-only with O(1) get.
 
-1. Construct a heterogeneous linked-list is O(n), since prepend is O(1).
-
-2. Convert it into a heterogeneous array in O(n).
-
-3. Following access will be a simple O(1) array indexing, with index computed at compile time so you can't get missing keys.
-
-Typical usage: a heterogeneous lookup table, indexed by type level string.
+1. `DynDict` which use `Seq` from `Data.Sequence`, it has O(log(min(i,n-i))) get, modify and O(1) add.
 
 Example
 -------
 
-```
+```haskell
 > :set -XDataKinds -XQuasiQuotes
+> :m + Data.Hetero.Dict
 > let d = mkDict . add [key|foo|] 12 . add [key|bar|] "baz" $ emptyStore
 > :t d
 d :: Num v => Dict '["foo" ':= v, "bar" ':= [Char]]
@@ -30,4 +25,17 @@ d :: Num v => Dict '["foo" ':= v, "bar" ':= [Char]]
 > get [key|qux|] d
  • Couldn't match type ‘'Index i1’ with ‘'NotFoundKey "qux"’
  ...
+```
+
+```haskell
+> :set -XDataKinds -XQuasiQuotes
+> :m + Data.Hetero.DynDict
+> let d =  add [key|foo|] 12 . add [key|bar|] "baz" $ empty
+> get [key|foo|] d
+12
+> get [key|bar|] d
+"baz"
+> let d' = set [key|foo] 13 d
+> get [key|foo|] d'
+13
 ```

@@ -36,20 +36,20 @@
 --
 module Data.Hetero.DynDict
     (
-    -- ** export from KVList
-      key
-    , KV(..)
-    , KVList(..)
-    , NotHasKey
-    , Ix
     -- ** DynDict
-    , DynDict
+      DynDict
     , empty
     , add
     , InDict
     , get
     , modify
     , (!)
+    -- ** re-export from KVList
+    , key
+    , KV(..)
+    , KVList(..)
+    , NotHasKey
+    , Ix
     -- ** Internal helpers
     , ShowDynDict(..)
     ) where

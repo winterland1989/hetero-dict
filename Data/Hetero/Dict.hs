@@ -41,14 +41,8 @@
 --
 module Data.Hetero.Dict
     (
-    -- ** export from KVList
-      key
-    , KV(..)
-    , KVList(..)
-    , NotHasKey
-    , Ix
     -- ** Store
-    , Store
+      Store
     , emptyStore
     , add
     -- ** Dict
@@ -58,6 +52,12 @@ module Data.Hetero.Dict
     , InDict
     , get
     , (!)
+    -- ** re-export from KVList
+    , key
+    , KV(..)
+    , KVList(..)
+    , NotHasKey
+    , Ix
     -- ** helpers
     , ShowDict(..)
     ) where
