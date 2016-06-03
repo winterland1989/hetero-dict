@@ -20,7 +20,7 @@
 -- This module define 'DynDict', which wrap a 'KVList' linked-list,
 -- benchmark showed that it's faster than previouse @Data.Sequence@ version,
 -- since usually the element number is small(<20).
--- so even oerations(add, get, modify, set)'s time complexity
+-- so even operations(add, get, modify, set)'s time complexity
 -- are not as good as 'Seq', it's constantly faster in practice.
 --
 -- Typical usage: a heterogeneous state store, indexed by type level string.
@@ -60,14 +60,15 @@ import           Data.Hetero.KVList
 import           Data.Hetero.Dict (Store(..), ShowDict(..), mkDict)
 import           Data.List          (intercalate)
 import           GHC.TypeLits
-import           Data.Proxy (Proxy)
+import           Data.Proxy (Proxy(..))
+import           Data.Aeson (ToJSON(..), FromJSON(..), Value(Object))
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Text as T
 
 --------------------------------------------------------------------------------
 
 -- | heterogeneous persistent sequence.
 --
--- The underline data structure is 'S.Seq'.
--- support efficient 'add', 'get' and 'modify' operations.
 newtype DynDict (kvs :: [KV *]) = DynDict (KVList kvs)
 
 -- | A empty 'DynDict'.
@@ -133,3 +134,29 @@ instance ShowDict kvs => Show (DynDict kvs) where
         ++ "}"
       where
         s = Store (size d) kvs
+
+instance ToJSON (DynDict '[]) where
+    toJSON _ = Object HM.empty
+
+instance (KnownSymbol k, ToJSON v, ToJSON (DynDict kvs)) => ToJSON (DynDict (k ':= v ': kvs)) where
+    toJSON (DynDict (Cons v kvs)) =
+        let (Object obj) = toJSON (DynDict kvs)
+            k = T.pack (symbolVal (Proxy :: Proxy k))
+            obj' = HM.insert k (toJSON v) obj
+        in Object obj'
+
+instance FromJSON (DynDict '[]) where
+    parseJSON (Object _) = pure (DynDict Empty)
+    parseJSON _          = fail "expect an object"
+
+instance (KnownSymbol k, FromJSON v, FromJSON (DynDict kvs)) => FromJSON (DynDict (k ':= v ': kvs)) where
+    parseJSON v@(Object obj) =
+        let kString = symbolVal (Proxy :: Proxy k)
+            k = T.pack kString
+        in case HM.lookup k obj of
+            Just v' -> do
+                DynDict kvs <- parseJSON v
+                v'' <- parseJSON v'
+                return (DynDict (Cons v'' kvs))
+            Nothing -> fail ("missing key: " ++ kString)
+    parseJSON _          = fail "expect an object"
