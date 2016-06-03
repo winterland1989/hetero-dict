@@ -10,7 +10,7 @@ This package provide two flavor fast and easy to use heterogeneous data structur
 
 1. `DynDict` which use linked-list(see module document for details).
 
-Features simple api, good performance and good error message.
+Features simple api, good performance and good error message, `Show` and `From/ToJSON` instances are provided.
 
 Example
 -------

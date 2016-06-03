@@ -146,7 +146,7 @@ instance (KnownSymbol k, ToJSON v, ToJSON (DynDict kvs)) => ToJSON (DynDict (k '
         in Object obj'
 
 instance FromJSON (DynDict '[]) where
-    parseJSON (Object _) = pure (DynDict Empty)
+    parseJSON (Object _) = return (DynDict Empty)
     parseJSON _          = fail "expect an object"
 
 instance (KnownSymbol k, FromJSON v, FromJSON (DynDict kvs)) => FromJSON (DynDict (k ':= v ': kvs)) where

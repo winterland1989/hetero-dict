@@ -4,6 +4,8 @@
 
 * Change DynDict's implementation to linked-list.
 
+* add From/ToJSON instance to DynDict.
+
 ## 0.1.0.1  -- 2016-05-31
 
 * fix DynDict's Show instance.
