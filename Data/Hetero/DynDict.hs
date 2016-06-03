@@ -15,10 +15,13 @@
 {-# LANGUAGE OverlappingInstances   #-}
 #endif
 
--- | Fast persistent heterogeneous sequence.
+-- | Fast persistent heterogeneous list.
 --
--- This module define 'DynDict', which use 'S.Seq' as underline data structure,
--- so all operations(add, get, modify, set)'s time complexity are similar.
+-- This module define 'DynDict', which wrap a 'KVList' linked-list,
+-- benchmark showed that it's faster than previouse @Data.Sequence@ version,
+-- since usually the element number is small(<20).
+-- so even oerations(add, get, modify, set)'s time complexity
+-- are not as good as 'Seq', it's constantly faster in practice.
 --
 -- Typical usage: a heterogeneous state store, indexed by type level string.
 --
@@ -44,24 +47,20 @@ module Data.Hetero.DynDict
     , get
     , modify
     , set
+    , size
     -- ** re-export from KVList
     , key
     , KV(..)
     , KVList(..)
     , NotHasKey
     , Ix
-    -- ** Internal helpers
-    , ShowDynDict(..)
     ) where
 
 import           Data.Hetero.KVList
+import           Data.Hetero.Dict (Store(..), ShowDict(..), mkDict)
 import           Data.List          (intercalate)
-import           Data.Proxy
-import qualified Data.Sequence      as S
-import           Data.Typeable      (TypeRep, Typeable, typeOf)
-import           GHC.Exts           (Any)
 import           GHC.TypeLits
-import           Unsafe.Coerce
+import           Data.Proxy (Proxy)
 
 --------------------------------------------------------------------------------
 
@@ -69,82 +68,68 @@ import           Unsafe.Coerce
 --
 -- The underline data structure is 'S.Seq'.
 -- support efficient 'add', 'get' and 'modify' operations.
-newtype DynDict (kvs :: [KV *]) = DynDict (S.Seq Any)
-
+newtype DynDict (kvs :: [KV *]) = DynDict (KVList kvs)
 
 -- | A empty 'DynDict'.
 --
 empty :: DynDict '[]
-empty = DynDict S.empty
-{-# INLINABLE empty #-}
+empty = DynDict Empty
+{-# INLINE empty #-}
 
 -- | O(1) insert new k-v pair into 'DynDict'.
-add :: (NotHasKey k kvs) => proxy k -> v -> DynDict kvs -> DynDict (k ':= v ': kvs)
-add _ v (DynDict d) = DynDict (unsafeCoerce v S.<| d)
+add :: (NotHasKey k kvs) => Proxy k -> v -> DynDict kvs -> DynDict (k ':= v ': kvs)
+add _ v (DynDict kvs) = DynDict (Cons v kvs)
 {-# INLINE add #-}
-
-getImpl :: forall i proxy k kvs v. ('Index i ~ Ix k kvs, KnownNat i) => proxy (k :: Symbol) -> DynDict kvs -> v
-getImpl _ (DynDict d) = unsafeCoerce $ d `S.index` fromIntegral (natVal (Proxy :: Proxy i))
-{-# INLINABLE getImpl #-}
-
-modifyImpl :: forall i proxy k kvs v. ('Index i ~ Ix k kvs, KnownNat i) => proxy (k :: Symbol) -> (v -> v) -> DynDict kvs -> DynDict kvs
-modifyImpl _ f (DynDict d) = DynDict $
-    S.adjust (unsafeCoerce . f . unsafeCoerce) (fromIntegral (natVal (Proxy :: Proxy i))) d
-{-# INLINABLE modifyImpl #-}
 
 -- | Constraint ensure 'DynDict' must contain k-v pair.
 --
 class InDict (k :: Symbol) (v :: *) (kvs :: [KV *]) | k kvs -> v where
-    get' :: proxy k -> DynDict kvs -> v
-    modify' ::  proxy k -> (v -> v) -> DynDict kvs -> DynDict kvs
+    get' :: Proxy k -> DynDict kvs -> v
+    modify' ::  Proxy k -> (v -> v) -> DynDict kvs -> DynDict kvs
 
 #if __GLASGOW_HASKELL__ >= 710
 instance {-# OVERLAPPING #-} InDict k v (k ':= v ': kvs) where
 #else
 instance InDict k v (k ':= v ': kvs) where
 #endif
-    get' = getImpl
+    get' _ (DynDict (Cons v _)) =  v
     {-# INLINE get' #-}
-    modify' = modifyImpl
+    modify' _ f (DynDict (Cons v kvs)) = DynDict $ Cons (f v) kvs
     {-# INLINE modify' #-}
 
 instance (InDict k v kvs, 'Index i ~ Ix k (k' ':= v' ': kvs), KnownNat i) => InDict k v (k' ':= v' ': kvs) where
-    get' = getImpl
+    get' p (DynDict (Cons _ kvs)) =  get' p (DynDict kvs)
     {-# INLINE get' #-}
-    modify' = modifyImpl
+    modify' p f (DynDict (Cons v kvs)) =
+        let DynDict kvs' = modify' p f (DynDict kvs)
+        in DynDict (Cons v kvs')
     {-# INLINE modify' #-}
 
--- | O(log(min(i,n-i))) get value using associated key.
+-- | O(m) get value using associated key.
 --
-get :: InDict k v kvs => proxy k -> DynDict kvs -> v
+get :: InDict k v kvs => Proxy k -> DynDict kvs -> v
 get = get'
-{-# INLINE get #-}
 
--- | O(log(min(i,n-i))) modify value by associated key.
-modify :: (InDict k v kvs) => proxy k -> (v -> v) -> DynDict kvs -> DynDict kvs
+-- | O(m) modify value by associated key.
+modify :: (InDict k v kvs) => Proxy k -> (v -> v) -> DynDict kvs -> DynDict kvs
 modify = modify'
-{-# INLINE modify #-}
 
--- | O(log(min(i,n-i))) modify value by associated key.
-set :: (InDict k v kvs) => proxy k -> v -> DynDict kvs -> DynDict kvs
+-- | O(m) modify value by associated key.
+set :: (InDict k v kvs) => Proxy k -> v -> DynDict kvs -> DynDict kvs
 set p v = modify' p (const v)
 {-# INLINE set #-}
 
+-- | O(n) size
+size :: DynDict kvs -> Int
+size (DynDict Empty) = 0
+size (DynDict (Cons _ kvs)) = 1 + size (DynDict kvs)
+{-# INLINE size #-}
+
 --------------------------------------------------------------------------------
 
--- | Helper class for defining store's 'Show' instance.
-class ShowDynDict (kvs :: [KV *]) where
-    showDict :: Int -> DynDict kvs -> [(String, String, TypeRep)]
-
-instance ShowDynDict '[] where
-    showDict _ _ = []
-
-instance (KnownSymbol k, Typeable v, Show v, ShowDynDict kvs) => ShowDynDict (k ':= v ': kvs) where
-    showDict i (DynDict t) =
-        (symbolVal (Proxy :: Proxy k), show (unsafeCoerce $ t `S.index` i :: v), typeOf (undefined :: v)):
-        showDict (i + 1) (unsafeCoerce $ DynDict t :: DynDict kvs)
-
-instance ShowDynDict kvs => Show (DynDict kvs) where
-    show d = "DynDict {" ++
-        (intercalate ", " . map (\(k, v, t) -> k ++ " = " ++ v ++ " :: " ++ show t) $ showDict 0 d)
+instance ShowDict kvs => Show (DynDict kvs) where
+    show d@(DynDict kvs) = "DynDict {" ++
+        (intercalate ", " . map (\(k, v, t) -> k ++ " = " ++ v ++ " :: " ++ show t) $ showDict 0 (mkDict s))
         ++ "}"
+      where
+        s = Store (size d) kvs

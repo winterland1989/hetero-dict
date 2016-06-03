@@ -26,15 +26,10 @@ main = defaultMain
 
 small :: [Benchmark]
 small =
-    [ bench "Build Dict"    $ nf (D.get [key|qux0|]) dict
-    , bench "Build DynDict" $ nf (DD.get [key|qux0|]) dynDict
-    , bench "Build HVect"   $ nf ((SSucc SZero)!!) hvect
-    , bench "Build Vinyl"   $ nf (fget_qux0) vinyl
-
-    , bench "Index Dict"    $ nf getAllDict dict
-    , bench "Index DynDict" $ nf getAllDynDict dynDict
-    , bench "Index HVect"   $ nf getAllHVect hvect
-    , bench "Index Vinyl"   $ nf getAllVinyl vinyl
+    [ bench "Index Dict"    $ nf (D.get [key|qux0|]) dict
+    , bench "Index DynDict" $ nf (DD.get [key|qux0|]) dynDict
+    , bench "Index HVect"   $ nf ((SSucc SZero) !!) hvect
+    , bench "Index Vinyl"   $ nf (fget_qux0) vinyl
     ]
   where
 
@@ -88,16 +83,12 @@ small =
 
 large :: [Benchmark]
 large =
-    [ bench "Build Dict"    $ nf (D.get [key|qux0|]) dict
-    , bench "Build DynDict" $ nf (DD.get [key|qux0|]) dynDict
-    , bench "Build HVect"   $ nf ((SSucc SZero)!!) hvect
-    , bench "Build Vinyl"   $ nf (fget_qux0) vinyl
+    [ bench "Index Dict"    $ nf (D.get [key|qux0|]) dict
+    , bench "Index DynDict" $ nf (DD.get [key|qux0|]) dynDict
+    , bench "Index HVect"   $ nf ((SSucc SZero)!!) hvect
+    , bench "Index Vinyl"   $ nf (fget_qux0) vinyl
 
-    , bench "Index Dict"     $ nf getAllDict dict
-    , bench "Index DynDict"  $ nf getAllDynDict dynDict
-    , bench "Index HVect"    $ nf getAllHVect hvect
     , bench "Modify DynDict" $ nf (DD.get [key|qux0|] . DD.modify [key|qux0|] not) dynDict
-    , bench "Index Vinyl"    $ nf getAllVinyl vinyl
     , bench "Modify Vinyl"   $ nf (fget_qux0 . fmodify [ps|qux0|] not) vinyl
     ]
 

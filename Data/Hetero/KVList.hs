@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE ConstraintKinds        #-}
 {-# LANGUAGE DataKinds              #-}
 {-# LANGUAGE FlexibleContexts       #-}
@@ -37,7 +38,7 @@ data KV v = Symbol := v
 -- | A simple heterogeneous kv linked-list.
 --
 data KVList (kvs :: [KV *]) where
-    Cons  :: v -> KVList kvs -> KVList (k ':= v ': kvs)
+    Cons  :: !v -> KVList kvs -> KVList (k ':= v ': kvs)
     Empty :: KVList '[]
 
 
@@ -86,7 +87,6 @@ type family Ix' (i :: Nat) (k :: Symbol) (kvs :: [KV *]) :: GetResult where
   Ix' i k '[] = 'NotFoundKey k
   Ix' i k (k  ':= v ': kvs) = 'Index i
   Ix' i k (k' ':= v ': kvs) = Ix' (i + 1) k kvs
-
 
 -- | Indexing a key at compile time.
 --

@@ -28,6 +28,9 @@
 --      3. Following access will be a simple O(1) array indexing,
 --      with index computed at compile time so you can't get missing keys.
 --
+-- In theory, it's faster than linked-list based data structures when n is large,
+-- but it needs more benchmark to be sure.
+--
 -- Typical usage: a heterogeneous lookup table, indexed by type level string.
 --
 -- @
@@ -42,7 +45,7 @@
 module Data.Hetero.Dict
     (
     -- ** Store
-      Store
+      Store(..)
     , emptyStore
     , add
     -- ** Dict
@@ -87,7 +90,7 @@ data Store kvs = Store
 --
 emptyStore :: Store '[]
 emptyStore = Store 0 Empty
-{-# INLINABLE emptyStore #-}
+{-# INLINE emptyStore #-}
 
 
 -- | O(1) add key value pair to 'Store'.
@@ -100,9 +103,9 @@ emptyStore = Store 0 Empty
 -- Store {bar = "baz" :: [Char], foo = 12 :: Int}
 -- @
 --
-add :: (NotHasKey k kvs) => proxy k -> v -> Store kvs -> Store (k ':= v ': kvs)
+add :: (NotHasKey k kvs) => Proxy k -> v -> Store kvs -> Store (k ':= v ': kvs)
 add _ v (Store l c) = Store (l + 1) (Cons v c)
-{-# INLINABLE add #-}
+{-# INLINE add #-}
 
 --------------------------------------------------------------------------------
 
@@ -135,14 +138,14 @@ mkDict :: Store kvs -> Dict kvs
 mkDict store = runST $ mkDict' store
 {-# INLINABLE mkDict #-}
 
-getImpl :: forall i proxy k kvs v. ('Index i ~ Ix k kvs, KnownNat i) => proxy (k :: Symbol) -> Dict kvs -> v
+getImpl :: forall i k kvs v. ('Index i ~ Ix k kvs, KnownNat i) => Proxy (k :: Symbol) -> Dict kvs -> v
 getImpl _ (Dict d) = unsafeCoerce $ d `P.indexArray` fromIntegral (natVal (Proxy :: Proxy i))
 {-# INLINABLE getImpl #-}
 
 -- | Constraint ensure 'Dict' must contain k-v pair.
 --
 class InDict (k :: Symbol) (v :: *) (kvs :: [KV *]) | k kvs -> v where
-    get' :: proxy k -> Dict kvs -> v
+    get' :: Proxy k -> Dict kvs -> v
 
 #if __GLASGOW_HASKELL__ >= 710
 instance {-# OVERLAPPING #-} InDict k v (k ':= v ': kvs) where
@@ -158,7 +161,7 @@ instance (InDict k v kvs, 'Index i ~ Ix k (k' ':= v' ': kvs), KnownNat i) => InD
 
 -- | O(1) get value using associated key from 'Dict'.
 --
-get :: InDict k v kvs => proxy k -> Dict kvs -> v
+get :: InDict k v kvs => Proxy k -> Dict kvs -> v
 get = get'
 {-# INLINE get #-}
 

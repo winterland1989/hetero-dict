@@ -1,5 +1,9 @@
 # Revision history for hetero-dict
 
+## 0.1.1.0  -- 2016-05-31
+
+* Change DynDict's implementation to linked-list.
+
 ## 0.1.0.1  -- 2016-05-31
 
 * fix DynDict's Show instance.
